@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+venv/
+.env
+.env.*
+.ipynb_checkpoints/
+*.zip
+ohio-dataset/
+archive/
+/glucometer-flask app */
+/Glucometer_project.ipynb
+/patient_test.xml

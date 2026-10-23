@@ -1,206 +1,99 @@
-# 🩸 Glucometer Glucose Forecaster
+# Glucometer Glucose Forecaster
 
-**A Flask web application powered by a Transformer-based deep learning model for real-time blood glucose forecasting.**
+A Flask research prototype that uses a Transformer model to forecast six glucose readings at five-minute intervals (30 minutes ahead) from the previous 24 readings (two hours).
 
----
+## Included
 
-## 🚀 Overview
+- Flask application with XML upload and drag-and-drop support.
+- Pretrained Keras model in `glucometer_app/model/glucometer_transformer_model.h5`.
+- Chart.js history/forecast chart, summary statistics, and PNG chart download.
+- Training notebook with Transformer and LSTM experiments; saved outputs are removed.
+- Synthetic XML example for trying the upload flow without patient data.
 
-**Glucometer Glucose Forecaster** predicts a patient's blood glucose levels **30 minutes into the future** using historical data from XML files. The app features an intuitive web interface, interactive visualizations, and a powerful Transformer model optimized for time-series prediction.
+## Setup
 
-### Why Use This?
-- 🏥 Anticipate glucose fluctuations before they happen
-- 📊 Make data-driven healthcare decisions
-- 🎯 Easy-to-use interface with drag-and-drop functionality
-- 🤖 Powered by state-of-the-art AI technology
+Use Python 3.11 in a virtual environment. Run these commands from the repository root:
 
----
-
-## ✨ Features
-
-- 🕒 **30-Minute Glucose Forecasting** — Predict upcoming glucose levels based on past readings
-- 📂 **XML File Upload** — Upload patient data in a structured XML format with drag-and-drop support
-- 📊 **Interactive Visualization** — Explore real-time glucose trends and forecasts via Chart.js graphs
-- 🤖 **Deep Learning Model (Transformer)** — Built with TensorFlow and Keras for accurate time-series prediction
-- 🧩 **Modular Flask Architecture** — Scalable Application Factory structure with Blueprints
-- 📈 **Statistics Dashboard** — View current, predicted, and trend values at a glance
-- 💾 **Download Charts** — Save prediction graphs as PNG images
-
----
-
-## 🧠 Tech Stack
-
-| Category | Technologies |
-|-----------|--------------|
-| **Backend** | Flask, Python 3.8+ |
-| **Machine Learning** | TensorFlow, Keras, Scikit-learn |
-| **Data Handling** | Pandas, NumPy |
-| **Frontend** | HTML5, CSS3, JavaScript |
-| **Visualization** | Chart.js |
-
----
-
-## 🏗️ Project Structure
-
-```
-glucometer-flask-app/
-├── run.py                  # Entry point to start the Flask app
-├── config.py               # Configuration settings
-├── requirements.txt        # Project dependencies
-└── glucometer_app/         # Main application package
-    ├── __init__.py         # Flask Application Factory
-    ├── ml_utils.py         # Model loading & prediction logic
-    ├── static/             # CSS and JS files
-    ├── templates/          # HTML templates
-    │   ├── index.html      # Upload page
-    │   └── result.html     # Results page
-    └── main/               # Application blueprint
-        ├── __init__.py
-        └── routes.py       # App routes and logic
-```
-
----
-
-## ⚙️ Setup and Installation
-
-### Prerequisites
-- Python 3.8 or higher
-- pip package manager
-
-### Installation Steps
-
-**1. Clone the Repository**
 ```bash
-git clone https://github.com/VenkateshKondapalli/glucometer-flask-app.git
-cd glucometer-flask-app
-```
-
-**2. Create and Activate Virtual Environment**
-
-Windows:
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-macOS/Linux:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-**3. Install Dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-**4. Run the Application**
-```bash
+git clone https://github.com/Atishmondi/Glucometer-flask-app.git
+cd Glucometer-flask-app
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 python run.py
 ```
 
-**5. Open in Browser**
+On Windows, activate with `.venv\Scripts\activate` instead. Open http://127.0.0.1:5000 and upload `examples/synthetic_patient.xml`.
+
+The development server starts in debug mode. This repository is not configured for production hosting. Chart.js and other frontend assets loaded from CDNs require internet access.
+
+## Repository layout
+
+```text
+config.py
+run.py
+requirements.txt
+requirements-notebook.txt
+glucometer_app/
+  __init__.py
+  ml_utils.py
+  main/
+    __init__.py
+    routes.py
+  model/
+    glucometer_transformer_model.h5
+  templates/
+    index.html
+    result.html
+examples/
+  synthetic_patient.xml
+notebooks/
+  Glucometer_project.ipynb
 ```
-http://127.0.0.1:5000
-```
 
----
+Styles and scripts are embedded in the templates; no separate static directory is needed.
 
-## 🎯 Usage
+## XML format
 
-1. **Upload XML File** — Drag and drop or click to select your patient's glucose data XML file
-2. **Submit** — Click "Get Prediction" button
-3. **View Results** — See the prediction graph with statistics
-4. **Download** — Save the chart as an image for your records
+The parser expects event groups with `ts` and `value` attributes. Timestamps use `DD-MM-YYYY HH:MM:SS`:
 
-### XML File Format Example
 ```xml
-<glucose_data>
-  <reading>
-    <timestamp>2025-10-14 10:00:00</timestamp>
-    <value>120</value>
-  </reading>
-  <!-- More readings... -->
-</glucose_data>
+<patient id="synthetic-demo">
+  <glucose_level>
+    <event ts="01-01-2025 08:00:00" value="120"/>
+    <!-- Supply at least 24 five-minute readings; see the complete example. -->
+  </glucose_level>
+  <meal><event ts="01-01-2025 08:30:00" value="30"/></meal>
+  <bolus><event ts="01-01-2025 08:30:00" value="2"/></bolus>
+</patient>
 ```
 
----
+Glucose, meal, and bolus values become the glucose, carbohydrates, and insulin features. Data is resampled to five-minute intervals; glucose gaps are interpolated and missing meal/bolus values are filled with zero. The last 24 processed rows feed the model.
 
-## 📈 What You'll See
+## Training notebook
 
-After uploading, the results page displays:
+```bash
+python -m pip install -r requirements-notebook.txt
+jupyter lab notebooks/Glucometer_project.ipynb
+```
 
-**Statistics Cards:**
-- Current Glucose Level (mg/dL)
-- Predicted Level (30 minutes ahead)
-- Trend (increase/decrease)
+The notebook expects an independently obtained `archive.zip` containing `559-ws-training.xml` from the Ohio dataset in its working directory. The training dataset is not distributed here. Obtain it under its applicable access and usage terms before running the notebook. The synthetic example is for the application demo, not for reproducing training results.
 
-**Interactive Chart:**
-- Blue line: Your historical glucose data
-- Purple dashed line: 30-minute forecast
-- Green line: Normal glucose range reference
+The notebook contains Transformer and LSTM training/evaluation experiments. It does not currently include a complete export procedure that reproduces the bundled H5 artifact.
 
----
+## Status and limitations
 
-## 🔒 Important Notes
+- The source, model artifact, and demonstration files are included. A full runtime/model-loading test was not performed during repository packaging because TensorFlow was unavailable in the packaging environment.
+- The application fits a new MinMaxScaler on each uploaded file; the original training scaler is not bundled. This can make inference scaling inconsistent with training.
+- The notebook normalizes before splitting and creates overlapping windows before its chronological split. Evaluation needs review for leakage before making accuracy claims.
+- Invalid XML, insufficient history, and model-loading failures do not yet have comprehensive user-facing error handling.
+- Uploads are processed in memory by the current routes. No user accounts, database persistence, live sensor integration, or deployment configuration is included.
+- The chart's green line is a fixed 100 mg/dL visual reference, not a personalized clinical target.
 
-⚠️ **Medical Disclaimer:**
-- This application is for **informational and educational purposes only**
-- Predictions should **NOT replace professional medical advice**
-- Always consult with healthcare professionals for treatment decisions
-- Patient data is processed temporarily and not stored
+This is an educational/research prototype, not a clinically validated medical device. Do not use predictions for treatment or insulin-dosing decisions.
 
----
+## Author and licensing
 
-## 🚧 Future Enhancements
+Atish Mondi — https://www.linkedin.com/in/atishmondi
 
-- [ ] User authentication and patient profiles
-- [ ] Real-time data integration from IoT glucometers
-- [ ] Mobile app development
-- [ ] API for third-party integrations
-- [ ] Advanced analytics and pattern recognition
-- [ ] Cloud deployment (AWS/Heroku/Docker)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
-- Report bugs
-- Suggest new features
-- Submit pull requests
-
-**Steps to Contribute:**
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/NewFeature`)
-3. Commit your changes (`git commit -m 'Add NewFeature'`)
-4. Push to the branch (`git push origin feature/NewFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-## 👨‍💻 Author
-**Atish Mondi**
-
-🔗 [LinkedIn](https://www.linkedin.com/in/atishmondi)  
-💻 Passionate about AI, ML, and Intelligent Healthcare Systems
-
----
-
-## 🌟 Support
-
-If you find this project helpful, please give it a ⭐️ on GitHub!
-
-For questions or support:
-- Open an issue on GitHub
-- Connect on LinkedIn
-
----
-
-**Made with ❤️ for Healthcare Innovation**# Glucometer-flask-app
+The previous README mentioned MIT, but no license file accompanied the source. No license grant is asserted here pending confirmation of source and model licensing.
