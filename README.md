@@ -2,6 +2,10 @@
 
 A Flask research prototype that uses a Transformer model to forecast six glucose readings at five-minute intervals (30 minutes ahead) from the previous 24 readings (two hours).
 
+[![Watch the Glucometer demo](docs/demo-preview.jpg)](https://github.com/user-attachments/assets/d0d70548-f459-4dec-bc95-7179d46e0ad9)
+
+*Watch the 22-second demo · XML upload → glucose forecast*
+
 ## Included
 
 - Flask application with XML upload and drag-and-drop support.
