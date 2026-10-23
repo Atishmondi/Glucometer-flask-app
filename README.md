@@ -1,103 +1,103 @@
-# Glucometer Glucose Forecaster
+# Glucometer
 
-A Flask research prototype that uses a Transformer model to forecast six glucose readings at five-minute intervals (30 minutes ahead) from the previous 24 readings (two hours).
+**Predicting the next 30 minutes of glucose readings from the previous two hours.**
 
 [![Watch the Glucometer demo](docs/demo-preview.jpg)](https://github.com/user-attachments/assets/d0d70548-f459-4dec-bc95-7179d46e0ad9)
 
-*Watch the 22-second demo · XML upload → glucose forecast*
+*22-second walkthrough. The video uses an illustrative forecast, not recorded model output.*
 
-## Included
+## About the project
 
-- Flask application with XML upload and drag-and-drop support.
-- Pretrained Keras model in `glucometer_app/model/glucometer_transformer_model.h5`.
-- Chart.js history/forecast chart, summary statistics, and PNG chart download.
-- Training notebook with Transformer and LSTM experiments; saved outputs are removed.
-- Synthetic XML example for trying the upload flow without patient data.
+Glucometer is a machine-learning project with a Flask web interface. It uses recorded glucose, carbohydrate and insulin data to estimate how glucose readings might change over the next 30 minutes. It works with uploaded files, not a live sensor or physical glucose meter.
 
-## Setup
+The project has two parts: a notebook that trains and compares **Transformer and LSTM models**, and a web app that uses the saved **Transformer model** to display forecasts. The notebook explores the modelling; the app makes the prediction flow accessible through a browser.
 
-Use Python 3.11 in a virtual environment. Run these commands from the repository root:
+## How it works
+
+1. **Upload XML** containing glucose history and any meal or insulin events.
+2. **Prepare the data** into five-minute intervals, using the latest 24 readings as input.
+3. **Predict six readings** covering the next 30 minutes.
+4. **View the result** on a history-and-forecast chart, or download it as a PNG.
+
+For example, with a last reading at **10:00**, the forecast covers **10:05 through 10:30**.
+
+## Features
+
+- XML upload with drag-and-drop support.
+- Interactive glucose history and forecast chart.
+- Latest reading, final predicted value and change summary.
+- PNG chart download.
+- Synthetic example file for trying the upload flow without patient data.
+
+**Stack:** Python · Flask · TensorFlow/Keras · pandas · scikit-learn · Chart.js
+
+## Run locally
+
+Use **Python 3.11**. From a terminal on macOS or Linux:
 
 ```bash
 git clone https://github.com/Atishmondi/Glucometer-flask-app.git
 cd Glucometer-flask-app
+
 python3.11 -m venv .venv
 source .venv/bin/activate
+
 python -m pip install -r requirements.txt
 python run.py
 ```
 
-On Windows, activate with `.venv\Scripts\activate` instead. Open http://127.0.0.1:5000 and upload `examples/synthetic_patient.xml`.
+On Windows, use `py -3.11 -m venv .venv` to create the environment and `.venv\Scripts\Activate.ps1` to activate it in PowerShell. The install and run commands are the same.
 
-The development server starts in debug mode. This repository is not configured for production hosting. Chart.js and other frontend assets loaded from CDNs require internet access.
+Open **http://127.0.0.1:5000**. Select [`examples/synthetic_patient.xml`](examples/synthetic_patient.xml), then click **Get Prediction**.
 
-## Repository layout
+The sample contains made-up readings, not patient data. The trained model is included, so retraining is not required. Internet access is needed for installation and the chart's CDN assets.
 
-```text
-config.py
-run.py
-requirements.txt
-requirements-notebook.txt
-glucometer_app/
-  __init__.py
-  ml_utils.py
-  main/
-    __init__.py
-    routes.py
-  model/
-    glucometer_transformer_model.h5
-  templates/
-    index.html
-    result.html
-examples/
-  synthetic_patient.xml
-notebooks/
-  Glucometer_project.ipynb
-```
+## Repository guide
 
-Styles and scripts are embedded in the templates; no separate static directory is needed.
+| Path | Purpose |
+| --- | --- |
+| `run.py` | Starts the local app. |
+| `glucometer_app/ml_utils.py` | Prepares data, loads the model and runs predictions. |
+| `glucometer_app/main/routes.py` | Handles uploads and results. |
+| `glucometer_app/templates/` | Upload and result pages. |
+| `glucometer_app/model/` | Saved Transformer model. |
+| `notebooks/Glucometer_project.ipynb` | Transformer and LSTM training experiments. |
+| `examples/synthetic_patient.xml` | Synthetic demo input. |
 
-## XML format
+## Status and limitations
 
-The parser expects event groups with `ts` and `value` attributes. Timestamps use `DD-MM-YYYY HH:MM:SS`:
+This is a research prototype. A full app/model-loading test was not completed during packaging, and no verified accuracy claim is made.
 
-```xml
-<patient id="synthetic-demo">
-  <glucose_level>
-    <event ts="01-01-2025 08:00:00" value="120"/>
-    <!-- Supply at least 24 five-minute readings; see the complete example. -->
-  </glucose_level>
-  <meal><event ts="01-01-2025 08:30:00" value="30"/></meal>
-  <bolus><event ts="01-01-2025 08:30:00" value="2"/></bolus>
-</patient>
-```
+- The app fits a new scaler per upload instead of reusing the training scaler.
+- The notebook's preprocessing and overlapping data windows need review for evaluation leakage.
+- Invalid uploads and model-loading errors need better handling.
+- Debug mode and the placeholder secret key make the current configuration unsuitable for public hosting.
+- The green chart line at 100 mg/dL is a fixed reference, not a personalized target.
 
-Glucose, meal, and bolus values become the glucose, carbohydrates, and insulin features. Data is resampled to five-minute intervals; glucose gaps are interpolated and missing meal/bolus values are filled with zero. The last 24 processed rows feed the model.
+**Not clinically validated. Do not use predictions for treatment or insulin-dosing decisions.**
 
-## Training notebook
+<details>
+<summary><strong>Training notebook and input details</strong></summary>
+
+Install the notebook dependencies and open Jupyter:
 
 ```bash
 python -m pip install -r requirements-notebook.txt
 jupyter lab notebooks/Glucometer_project.ipynb
 ```
 
-The notebook expects an independently obtained `archive.zip` containing `559-ws-training.xml` from the Ohio dataset in its working directory. The training dataset is not distributed here. Obtain it under its applicable access and usage terms before running the notebook. The synthetic example is for the application demo, not for reproducing training results.
+The notebook expects `archive.zip` containing `559-ws-training.xml` from the Ohio dataset in its working directory. The original dataset is not included; obtain it under its applicable access and usage terms. The synthetic example is only for the app demo.
 
-The notebook contains Transformer and LSTM training/evaluation experiments. It does not currently include a complete export procedure that reproduces the bundled H5 artifact.
+The experiments use 24 input intervals and six output intervals, with a chronological 70/15/15 train/validation/test split. The Transformer uses four encoder blocks; the comparison LSTM uses two 64-unit layers. Saved notebook outputs have been removed. A complete export procedure reproducing the bundled model is not yet included.
 
-## Status and limitations
+Input XML uses `glucose_level`, `meal` and `bolus` event groups, with `ts` and `value` attributes. Timestamps follow `DD-MM-YYYY HH:MM:SS`. See the complete synthetic example for the format. The app interpolates glucose gaps and fills missing meal and bolus values with zero.
 
-- The source, model artifact, and demonstration files are included. A full runtime/model-loading test was not performed during repository packaging because TensorFlow was unavailable in the packaging environment.
-- The application fits a new MinMaxScaler on each uploaded file; the original training scaler is not bundled. This can make inference scaling inconsistent with training.
-- The notebook normalizes before splitting and creates overlapping windows before its chronological split. Evaluation needs review for leakage before making accuracy claims.
-- Invalid XML, insufficient history, and model-loading failures do not yet have comprehensive user-facing error handling.
-- Uploads are processed in memory by the current routes. No user accounts, database persistence, live sensor integration, or deployment configuration is included.
-- The chart's green line is a fixed 100 mg/dL visual reference, not a personalized clinical target.
+</details>
 
-This is an educational/research prototype, not a clinically validated medical device. Do not use predictions for treatment or insulin-dosing decisions.
+## Author
 
-## Author and licensing
+[Atish Mondi](https://www.linkedin.com/in/atishmondi)
 
-Atish Mondi — https://www.linkedin.com/in/atishmondi
+## License
 
-The previous README mentioned MIT, but no license file accompanied the source. No license grant is asserted here pending confirmation of source and model licensing.
+No license file is currently included. Source and model licensing remain to be confirmed.
